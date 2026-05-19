@@ -1,0 +1,180 @@
+<!doctype html>
+<html lang="th">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>สั่งข้าวเที่ยง 🍱</title>
+  <link rel="stylesheet" href="/styles.css" />
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">🍱 <span>สั่งข้าวเที่ยง</span></div>
+    <div class="date-pill" id="datePill">—</div>
+  </header>
+
+  <nav class="tabs">
+    <button class="tab active" data-tab="order">📋 สั่งอาหาร</button>
+    <button class="tab" data-tab="summary">📊 สรุป</button>
+    <button class="tab" data-tab="pay">💳 ชำระเงิน</button>
+  </nav>
+
+  <!-- ========== TAB: ORDER ========== -->
+  <section class="view" id="view-order">
+    <div class="who-bar">
+      <label>ฉันคือ:</label>
+      <select id="personSelect"></select>
+      <button class="ghost" id="addPersonBtn">+ เพิ่มชื่อ</button>
+    </div>
+
+    <div id="myOrderBox" class="my-order hidden">
+      <h3>ออเดอร์ของคุณวันนี้</h3>
+      <ul id="myOrderList"></ul>
+    </div>
+
+    <div class="search-bar">
+      <span class="search-icon">🔍</span>
+      <input type="text" id="searchInput" placeholder="ค้นหาเมนู เช่น กะเพรา, ผัดซีอิ๊ว..." />
+      <button class="search-clear hidden" id="searchClearBtn" title="ล้าง">×</button>
+    </div>
+
+    <section class="menu-section hidden" id="sectionFavorites">
+      <h2 class="section-title">⭐ เมนูโปรดของฉัน</h2>
+      <div class="menu-grid" id="favoritesGrid"></div>
+    </section>
+
+    <section class="menu-section hidden" id="sectionPopular">
+      <h2 class="section-title">🔥 เมนูยอดฮิต <span class="section-sub">(30 วันล่าสุด)</span></h2>
+      <div class="menu-grid" id="popularGrid"></div>
+    </section>
+
+    <section class="menu-section" id="sectionAll">
+      <h2 class="section-title" id="allSectionTitle">เมนูทั้งหมด</h2>
+      <div class="menu-grid" id="menuGrid"></div>
+      <div class="empty-search hidden" id="emptySearch">ไม่พบเมนูที่ค้นหา</div>
+    </section>
+  </section>
+
+  <!-- ========== TAB: SUMMARY ========== -->
+  <section class="view hidden" id="view-summary">
+    <div class="summary-head">
+      <h2 id="summaryTitle">สรุปออเดอร์</h2>
+      <div class="summary-actions">
+        <button id="copySummaryBtn">📋 คัดลอก</button>
+        <button id="printSummaryBtn">🖨️ พิมพ์</button>
+      </div>
+    </div>
+
+    <div class="history-bar">
+      <label>วันที่:</label>
+      <input type="date" id="historyDate" />
+      <button class="ghost" id="todayBtn">วันนี้</button>
+      <span class="history-recent-label">ย้อนหลัง:</span>
+      <div class="history-chips" id="historyChips"></div>
+    </div>
+
+    <div id="summaryMeta" class="summary-meta"></div>
+    <table class="summary-table" id="summaryTable">
+      <thead>
+        <tr><th>ลำดับ</th><th>ชื่อ</th><th>รายการอาหาร</th><th></th></tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </section>
+
+  <!-- ========== TAB: PAYMENT ========== -->
+  <section class="view hidden" id="view-pay">
+    <h2>ชำระเงิน — PromptPay</h2>
+    <div class="qr-card">
+      <div class="qr-brand">THAI QR PAYMENT</div>
+      <img id="qrImage" alt="PromptPay QR" />
+      <div id="qrFallback" class="qr-fallback">
+        <div class="qr-placeholder">QR</div>
+        <p>ยังไม่ได้อัปโหลด QR — กดปุ่มด้านล่างเพื่ออัปโหลด</p>
+      </div>
+      <div class="qr-name" id="qrName">—</div>
+      <div class="qr-phone-label">Mobile no.</div>
+      <div class="qr-phone" id="qrPhone">—</div>
+    </div>
+
+    <div class="qr-admin">
+      <h3>แก้ไขข้อมูล (สำหรับแอดมิน)</h3>
+      <div class="field">
+        <label>ชื่อผู้รับเงิน</label>
+        <input type="text" id="payeeNameInput" />
+      </div>
+      <div class="field">
+        <label>เบอร์โทร</label>
+        <input type="text" id="payeePhoneInput" />
+      </div>
+      <div class="field">
+        <label>QR Code (PNG/JPG)</label>
+        <input type="file" id="qrFileInput" accept="image/*" />
+        <p class="hint">รูป QR จะถูกเก็บไว้ใน database เปลี่ยนเมื่อไหร่ก็ได้</p>
+      </div>
+      <button class="primary" id="saveSettingsBtn">บันทึก</button>
+    </div>
+  </section>
+
+  <!-- ========== Order modal ========== -->
+  <div class="modal hidden" id="orderModal">
+    <div class="modal-card">
+      <div class="modal-head">
+        <span id="modalTitle">—</span>
+        <button class="close" id="closeModal">×</button>
+      </div>
+      <div class="modal-body">
+        <div class="field" id="proteinField">
+          <label>เนื้อสัตว์</label>
+          <div class="chip-row" id="proteinChips"></div>
+        </div>
+
+        <div class="field hidden" id="styleField">
+          <label>แบบ</label>
+          <div class="chip-row" id="styleChips">
+            <button class="chip" data-val="น้ำ">น้ำ</button>
+            <button class="chip" data-val="แห้ง">แห้ง</button>
+          </div>
+        </div>
+
+        <div class="field">
+          <label>เพิ่มไข่</label>
+          <div class="chip-row" id="eggChips">
+            <button class="chip" data-val="">ไม่ใส่</button>
+            <button class="chip" data-val="ไข่ดาว">ไข่ดาว</button>
+            <button class="chip" data-val="ไข่เจียว">ไข่เจียว</button>
+          </div>
+        </div>
+
+        <div class="field">
+          <label>ระดับความเผ็ด</label>
+          <div class="chip-row" id="spiceChips">
+            <button class="chip" data-val="">ปกติ</button>
+            <button class="chip" data-val="ไม่เผ็ด">ไม่เผ็ด</button>
+            <button class="chip" data-val="เผ็ดน้อย">เผ็ดน้อย</button>
+            <button class="chip" data-val="เผ็ดมาก">เผ็ดมาก</button>
+          </div>
+        </div>
+
+        <div class="field">
+          <label class="checkbox">
+            <input type="checkbox" id="specialChk" />
+            <span>พิเศษ (เพิ่มเนื้อ)</span>
+          </label>
+        </div>
+
+        <div class="field">
+          <label>หมายเหตุเพิ่มเติม</label>
+          <input type="text" id="notesInput" placeholder="เช่น ไม่ใส่ผัก, แยกข้าว ฯลฯ" />
+        </div>
+      </div>
+      <div class="modal-foot">
+        <button class="primary" id="confirmOrderBtn">✅ ยืนยันสั่ง</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="toast hidden" id="toast"></div>
+
+  <script src="/app.js"></script>
+</body>
+</html>
