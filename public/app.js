@@ -105,8 +105,10 @@ $$('.tab').forEach((btn) => {
     $('#view-order').classList.toggle('hidden', tab !== 'order');
     $('#view-summary').classList.toggle('hidden', tab !== 'summary');
     $('#view-pay').classList.toggle('hidden', tab !== 'pay');
+    $('#view-admin').classList.toggle('hidden', tab !== 'admin');
     if (tab === 'summary') openSummary(state.currentDate || todayBKK());
     if (tab === 'pay')     loadSettings();
+    if (tab === 'admin')   loadAdminMenu();
   });
 });
 
@@ -639,6 +641,110 @@ $('#saveSettingsBtn').addEventListener('click', async () => {
     if (/รหัสผ่าน/.test(err.message)) {
       sessionStorage.removeItem('adminPw');  // ล้าง pw ที่ผิด
     }
+    alert('ผิดพลาด: ' + err.message);
+  }
+});
+
+// ===== Admin: menu management =====
+async function loadAdminMenu() {
+  try {
+    // ดึง settings ก่อน เพื่อรู้ว่าต้องใช้รหัสไหม
+    const cfg = await api('/api/settings');
+    state.adminRequired = !!cfg.admin_required;
+
+    const items = await api('/api/menu?all=true');
+    const list = $('#adminMenuList');
+    list.innerHTML = items.map((m) => `
+      <div class="admin-menu-row ${m.is_active ? '' : 'inactive'}" data-id="${m.id}">
+        <div class="thumb">
+          ${safeUrl(m.image_url)
+            ? `<img src="${esc(m.image_url)}" alt="" onerror="this.outerHTML='${esc(m.emoji || '🍽️')}'" />`
+            : esc(m.emoji || '🍽️')}
+        </div>
+        <div class="info">
+          <div class="row-name">${esc(m.name_th)}</div>
+          <div class="row-meta">
+            ${esc(m.category || '—')}
+            ${!m.is_active ? '<span style="color:var(--danger)"> · ปิดอยู่</span>' : ''}
+          </div>
+          <div class="badges">
+            ${m.has_protein ? '<span class="badge">หมู/ไก่/ทะเล</span>' : ''}
+            ${m.has_style ? '<span class="badge">น้ำ/แห้ง</span>' : ''}
+          </div>
+        </div>
+        <div class="actions">
+          <button data-action="toggle" data-id="${m.id}" data-active="${m.is_active}">
+            ${m.is_active ? '⏸ ปิด' : '▶ เปิด'}
+          </button>
+          <button data-action="delete" data-id="${m.id}" class="danger">🗑️ ลบ</button>
+        </div>
+      </div>
+    `).join('');
+
+    list.querySelectorAll('button[data-action]').forEach((b) => {
+      b.addEventListener('click', () => handleAdminAction(b.dataset.action, Number(b.dataset.id), b.dataset.active === 'true'));
+    });
+  } catch (err) {
+    alert('โหลดข้อมูลล้มเหลว: ' + err.message);
+  }
+}
+
+async function handleAdminAction(action, id, isActive) {
+  try {
+    if (action === 'toggle') {
+      await api(`/api/menu/${id}`, {
+        method: 'PATCH',
+        headers: getAdminHeader(),
+        body: JSON.stringify({ is_active: !isActive }),
+      });
+      showToast(isActive ? 'ปิดเมนูแล้ว' : 'เปิดเมนูแล้ว');
+    } else if (action === 'delete') {
+      if (!confirm('ลบเมนูนี้?\n(ถ้าเคยมีออเดอร์อ้างถึง จะเป็นการ "ปิด" แทน)')) return;
+      const r = await api(`/api/menu/${id}`, {
+        method: 'DELETE',
+        headers: getAdminHeader(),
+      });
+      showToast(r.soft_deleted ? `ปิดเมนูแล้ว (มีออเดอร์เก่า ${r.order_count} รายการ)` : 'ลบเมนูแล้ว');
+    }
+    await loadAdminMenu();
+    await loadMenu();         // refresh เมนูในแท็บสั่งอาหาร
+    await loadPopular();
+  } catch (err) {
+    if (/รหัสผ่าน/.test(err.message)) sessionStorage.removeItem('adminPw');
+    alert('ผิดพลาด: ' + err.message);
+  }
+}
+
+$('#addMenuBtn').addEventListener('click', async () => {
+  const payload = {
+    name_th:     $('#newMenuName').value.trim(),
+    emoji:       $('#newMenuEmoji').value.trim(),
+    image_url:   $('#newMenuImage').value.trim(),
+    category:    $('#newMenuCategory').value.trim(),
+    has_protein: $('#newMenuProtein').checked,
+    has_style:   $('#newMenuStyle').checked,
+  };
+  if (!payload.name_th) { alert('กรุณาใส่ชื่อเมนู'); return; }
+
+  try {
+    await api('/api/menu', {
+      method: 'POST',
+      headers: getAdminHeader(),
+      body: JSON.stringify(payload),
+    });
+    // เคลียร์ฟอร์ม
+    $('#newMenuName').value = '';
+    $('#newMenuEmoji').value = '';
+    $('#newMenuImage').value = '';
+    $('#newMenuCategory').value = '';
+    $('#newMenuProtein').checked = false;
+    $('#newMenuStyle').checked = false;
+
+    await loadAdminMenu();
+    await loadMenu();
+    showToast(`เพิ่ม "${payload.name_th}" แล้ว`);
+  } catch (err) {
+    if (/รหัสผ่าน/.test(err.message)) sessionStorage.removeItem('adminPw');
     alert('ผิดพลาด: ' + err.message);
   }
 });

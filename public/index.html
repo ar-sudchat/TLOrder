@@ -16,6 +16,7 @@
     <button class="tab active" data-tab="order">📋 สั่งอาหาร</button>
     <button class="tab" data-tab="summary">📊 สรุป</button>
     <button class="tab" data-tab="pay">💳 ชำระเงิน</button>
+    <button class="tab" data-tab="admin">🛠️ จัดการเมนู</button>
   </nav>
 
   <!-- ========== TAB: ORDER ========== -->
@@ -112,6 +113,48 @@
         <p class="hint">รูป QR จะถูกเก็บไว้ใน database เปลี่ยนเมื่อไหร่ก็ได้</p>
       </div>
       <button class="primary" id="saveSettingsBtn">บันทึก</button>
+    </div>
+  </section>
+
+  <!-- ========== TAB: ADMIN (จัดการเมนู) ========== -->
+  <section class="view hidden" id="view-admin">
+    <h2>🛠️ จัดการเมนู</h2>
+    <p class="admin-hint">เพิ่ม / แก้ไข / ปิด-เปิด เมนูในร้าน — ต้องใส่รหัสแอดมินตอนบันทึก</p>
+
+    <div class="admin-card">
+      <h3>➕ เพิ่มเมนูใหม่</h3>
+      <div class="form-row">
+        <div class="field">
+          <label>ชื่อเมนู <span class="req">*</span></label>
+          <input type="text" id="newMenuName" placeholder="เช่น ต้มยำกุ้ง" maxlength="100" />
+        </div>
+        <div class="field field-small">
+          <label>Emoji</label>
+          <input type="text" id="newMenuEmoji" placeholder="🍜" maxlength="4" />
+        </div>
+      </div>
+      <div class="field">
+        <label>URL รูปภาพ (optional)</label>
+        <input type="text" id="newMenuImage" placeholder="https://..." />
+        <p class="hint">เว้นว่างได้ — จะใช้ emoji แทน</p>
+      </div>
+      <div class="form-row">
+        <div class="field">
+          <label>หมวด</label>
+          <input type="text" id="newMenuCategory" placeholder="จานหลัก / เส้น / ของง่าย" maxlength="40" />
+        </div>
+        <div class="field field-flags">
+          <label>ตัวเลือก</label>
+          <label class="checkbox"><input type="checkbox" id="newMenuProtein" /> มีให้เลือกหมู/ไก่/ทะเล</label>
+          <label class="checkbox"><input type="checkbox" id="newMenuStyle" /> มีให้เลือกน้ำ/แห้ง</label>
+        </div>
+      </div>
+      <button class="primary" id="addMenuBtn">+ เพิ่มเมนู</button>
+    </div>
+
+    <div class="admin-card">
+      <h3>📋 รายการเมนูทั้งหมด</h3>
+      <div id="adminMenuList" class="admin-menu-list"></div>
     </div>
   </section>
 

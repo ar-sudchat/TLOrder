@@ -61,12 +61,102 @@ app.get('/health', async (_req, res) => {
 });
 
 // ===== Menu =====
-app.get('/api/menu', async (_req, res) => {
+app.get('/api/menu', async (req, res) => {
+  // ?all=true เพื่อรวมเมนูที่ปิดไว้ (สำหรับ admin)
+  const includeInactive = req.query.all === 'true';
   try {
     const { rows } = await pool.query(
-      'SELECT * FROM menu_items WHERE is_active = true ORDER BY display_order'
+      includeInactive
+        ? 'SELECT * FROM menu_items ORDER BY is_active DESC, display_order'
+        : 'SELECT * FROM menu_items WHERE is_active = true ORDER BY display_order'
     );
     res.json(rows);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ===== Menu CRUD (admin only) =====
+app.post('/api/menu', requireAdmin, async (req, res) => {
+  const b = req.body || {};
+  const name_th   = (b.name_th   || '').trim().slice(0, 100);
+  const emoji     = (b.emoji     || '').trim().slice(0, 10) || '🍽️';
+  const image_url = (b.image_url || '').trim() || null;
+  const category  = (b.category  || '').trim().slice(0, 40) || null;
+  const has_protein = !!b.has_protein;
+  const has_style   = !!b.has_style;
+
+  if (!name_th) return res.status(400).json({ error: 'ชื่อเมนูจำเป็น' });
+  if (image_url && !/^https?:\/\//i.test(image_url)) {
+    return res.status(400).json({ error: 'image_url ต้องเป็น URL ขึ้นต้นด้วย http:// หรือ https://' });
+  }
+  try {
+    const { rows } = await pool.query(
+      `INSERT INTO menu_items (name_th, emoji, image_url, has_protein, has_style, category, display_order, is_active)
+       VALUES ($1, $2, $3, $4, $5, $6, COALESCE((SELECT MAX(display_order) FROM menu_items), 0) + 1, true)
+       RETURNING *`,
+      [name_th, emoji, image_url, has_protein, has_style, category]
+    );
+    res.json(rows[0]);
+  } catch (err) {
+    if (err.code === '23505') return res.status(400).json({ error: 'ชื่อเมนูนี้มีอยู่แล้ว' });
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.patch('/api/menu/:id', requireAdmin, async (req, res) => {
+  const id = Number(req.params.id);
+  if (!Number.isFinite(id)) return res.status(400).json({ error: 'invalid id' });
+  const b = req.body || {};
+
+  const fields = [];
+  const values = [];
+  const set = (col, val) => { fields.push(`${col} = $${fields.length + 1}`); values.push(val); };
+
+  if (typeof b.name_th    === 'string')  set('name_th',    b.name_th.trim().slice(0, 100));
+  if (typeof b.emoji      === 'string')  set('emoji',      b.emoji.trim().slice(0, 10) || '🍽️');
+  if (typeof b.image_url  === 'string')  {
+    const u = b.image_url.trim();
+    if (u && !/^https?:\/\//i.test(u)) return res.status(400).json({ error: 'image_url ต้องเป็น URL ขึ้นต้นด้วย http:// หรือ https://' });
+    set('image_url', u || null);
+  }
+  if (typeof b.category    === 'string') set('category',    b.category.trim().slice(0, 40) || null);
+  if (typeof b.has_protein === 'boolean') set('has_protein', b.has_protein);
+  if (typeof b.has_style   === 'boolean') set('has_style',   b.has_style);
+  if (typeof b.is_active   === 'boolean') set('is_active',   b.is_active);
+
+  if (fields.length === 0) return res.status(400).json({ error: 'ไม่มีฟิลด์ที่อัปเดต' });
+  values.push(id);
+
+  try {
+    const { rows } = await pool.query(
+      `UPDATE menu_items SET ${fields.join(', ')} WHERE id = $${fields.length + 1} RETURNING *`,
+      values
+    );
+    if (rows.length === 0) return res.status(404).json({ error: 'not found' });
+    res.json(rows[0]);
+  } catch (err) {
+    if (err.code === '23505') return res.status(400).json({ error: 'ชื่อเมนูนี้มีอยู่แล้ว' });
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.delete('/api/menu/:id', requireAdmin, async (req, res) => {
+  const id = Number(req.params.id);
+  if (!Number.isFinite(id)) return res.status(400).json({ error: 'invalid id' });
+  try {
+    // ถ้ามีออเดอร์อ้างถึงเมนูนี้ — soft delete (set is_active = false) แทน
+    const { rows } = await pool.query(
+      'SELECT COUNT(*)::int AS n FROM orders WHERE menu_item_id = $1',
+      [id]
+    );
+    if (rows[0].n > 0) {
+      await pool.query('UPDATE menu_items SET is_active = false WHERE id = $1', [id]);
+      return res.json({ ok: true, soft_deleted: true, order_count: rows[0].n });
+    }
+    const r = await pool.query('DELETE FROM menu_items WHERE id = $1', [id]);
+    if (!r.rowCount) return res.status(404).json({ error: 'not found' });
+    res.json({ ok: true, soft_deleted: false });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
