@@ -10,6 +10,9 @@ WORKDIR /app
 ENV NODE_ENV=production
 ENV PORT=3000
 
+# curl ใช้สำหรับ healthcheck ของ Coolify + Docker
+RUN apk add --no-cache curl
+
 # Copy production deps from previous stage
 COPY --from=deps /app/node_modules ./node_modules
 
@@ -27,7 +30,7 @@ USER app
 EXPOSE 3000
 
 # Health check ใช้ /health endpoint ที่เรามี
-HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
-  CMD wget --quiet --tries=1 --spider http://localhost:3000/health || exit 1
+HEALTHCHECK --interval=30s --timeout=5s --start-period=30s --retries=3 \
+  CMD curl -fsS http://localhost:3000/health || exit 1
 
 CMD ["node", "server.js"]
