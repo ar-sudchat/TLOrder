@@ -29,8 +29,8 @@ USER app
 
 EXPOSE 3000
 
-# Health check ใช้ /health endpoint ที่เรามี
-HEALTHCHECK --interval=30s --timeout=5s --start-period=30s --retries=3 \
-  CMD curl -fsS http://localhost:3000/health || exit 1
+# ไม่ใส่ HEALTHCHECK ใน Dockerfile — ให้ Coolify จัดการ healthcheck ผ่าน UI
+# (ถ้าใส่ที่นี่ Docker จะรายงาน status = "starting" 30 วินาทีแรก
+#  ทำให้ Coolify ตัดสินว่า "not healthy" แล้ว rollback ทันที)
 
 CMD ["node", "server.js"]
