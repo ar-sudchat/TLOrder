@@ -29,8 +29,10 @@ USER app
 
 EXPOSE 3000
 
-# ไม่ใส่ HEALTHCHECK ใน Dockerfile — ให้ Coolify จัดการ healthcheck ผ่าน UI
-# (ถ้าใส่ที่นี่ Docker จะรายงาน status = "starting" 30 วินาทีแรก
-#  ทำให้ Coolify ตัดสินว่า "not healthy" แล้ว rollback ทันที)
+# HEALTHCHECK — ต้องมี ไม่งั้น Coolify จะ error ตอน docker inspect (.State.Health ไม่มี)
+# ใช้ / (static index.html) แทน /health เพราะไม่ต้อง query DB → fast & no false negatives
+# start-interval=1s ทำให้ check แรกรันที่ t=1s → กลายเป็น "healthy" เร็ว
+HEALTHCHECK --interval=15s --timeout=3s --start-period=10s --start-interval=1s --retries=3 \
+  CMD curl -fsS -o /dev/null http://localhost:3000/ || exit 1
 
 CMD ["node", "server.js"]
