@@ -3,13 +3,14 @@ import express from 'express';
 import pg from 'pg';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { initDb, needsSsl } from './scripts/init-db.js';
 
 const { Pool } = pg;
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
-  ssl: { rejectUnauthorized: false },
+  ssl: needsSsl(process.env.DATABASE_URL) ? { rejectUnauthorized: false } : false,
   max: 10,
   idleTimeoutMillis: 30000,
 });
@@ -393,6 +394,16 @@ app.use(express.static(join(__dirname, 'public'), { etag: true, lastModified: tr
 
 // ===== Boot + Graceful shutdown =====
 const PORT = process.env.PORT || 3000;
+
+// Auto-init DB ตอน boot — schema เป็น idempotent (CREATE TABLE IF NOT EXISTS)
+// seed ก็ idempotent (ON CONFLICT DO UPDATE/NOTHING) ฉะนั้นรันซ้ำได้ปลอดภัย
+// ถ้า init ล้มเหลว ยังคงเริ่ม HTTP server ต่อ เพื่อให้ /health คืน 503 (Coolify รู้)
+try {
+  await initDb();
+} catch (err) {
+  console.error('⚠️  initDb failed (server will still start):', err.message);
+}
+
 const server = app.listen(PORT, () => {
   console.log(`🍱 Lunch order app: http://localhost:${PORT}`);
   if (!ADMIN_PASSWORD) {
