@@ -3,39 +3,101 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>สั่งข้าวเที่ยง 🍱</title>
+  <title>🍱 สั่งข้าวเที่ยง - Lunch Order App</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/styles.css" />
 </head>
 <body>
   <header class="topbar">
-    <div class="brand">🍱 <span>สั่งข้าวเที่ยง</span></div>
-    <div class="date-pill" id="datePill">—</div>
+    <div class="brand">
+      <span class="brand-icon">🍱</span>
+      <div class="brand-text">
+        <span class="brand-title">สั่งข้าวเที่ยง</span>
+        <span class="brand-sub">Team Lunch Order</span>
+      </div>
+    </div>
+    <div class="topbar-actions">
+      <button class="theme-toggle" id="themeToggleBtn" title="สลับธีม">✨ ธีมสว่าง/มืด</button>
+      <div class="date-pill" id="datePill">—</div>
+    </div>
   </header>
 
   <nav class="tabs">
     <button class="tab active" data-tab="order">📋 สั่งอาหาร</button>
-    <button class="tab" data-tab="summary">📊 สรุป</button>
-    <button class="tab" data-tab="pay">💳 ชำระเงิน</button>
-    <button class="tab" data-tab="admin">🛠️ จัดการเมนู</button>
+    <button class="tab" data-tab="summary">📊 สรุปออเดอร์ & รวมเงิน</button>
+    <button class="tab" data-tab="pay">💳 ชำระเงิน (PromptPay)</button>
+    <button class="tab" data-tab="admin">🛠️ จัดการเมนู & ราคา</button>
   </nav>
 
   <!-- ========== TAB: ORDER ========== -->
   <section class="view" id="view-order">
+    <!-- ========== CUTOFF COUNTDOWN TIMER BANNER ========== -->
+    <div class="cutoff-timer-card" id="cutoffTimerCard">
+      <div class="cutoff-left">
+        <span class="cutoff-icon">⏰</span>
+        <span class="cutoff-status-badge open" id="cutoffStatusBadge">🟢 เปิดรับออเดอร์</span>
+        <span class="cutoff-time-text" id="cutoffText">เหลือเวลาอีก <strong id="cutoffTimerValue">--:--</strong> นาที (ตัดรอบ 11:30 น.)</span>
+      </div>
+      <button class="lucky-wheel-trigger" id="openWheelBtn">🎡 วงล้อมงคลสุ่มอาหาร</button>
+    </div>
+
     <div class="who-bar">
-      <label>ฉันคือ:</label>
-      <select id="personSelect"></select>
-      <button class="ghost" id="addPersonBtn">+ เพิ่มชื่อ</button>
+      <div class="who-left">
+        <span class="who-icon">👤</span>
+        <label for="personSelect">ผู้สั่งอาหาร:</label>
+        <select id="personSelect"></select>
+      </div>
+      <div class="who-right">
+        <button class="ghost" id="addPersonBtn">+ เพิ่มชื่อสมาชิก</button>
+        <button class="ghost secondary-ghost" id="quickAddMenuBtn">+ เพิ่มเมนูใหม่</button>
+      </div>
+    </div>
+
+    <!-- ========== AI CARTOON MASCOT RECOMMENDATION ========== -->
+    <div class="ai-mascot-card" id="aiMascotCard">
+      <div class="mascot-avatar-container">
+        <img src="/images/ai_chef.jpg" alt="AI Chef Mascot" class="mascot-avatar" />
+        <span class="mascot-badge">🤖 AI Chef น้องหมี</span>
+      </div>
+      <div class="mascot-speech-bubble">
+        <div class="speech-header">
+          <span class="speech-title">💡 AI เชฟน้องหมีแนะนำเมนูเด็ดเที่ยงนี้!</span>
+          <button class="ai-refresh-btn" id="aiRefreshBtn" title="สุ่มคำแนะนำใหม่">🔄 สุ่มใหม่</button>
+        </div>
+        <div class="speech-content" id="aiRecommendationText">
+          กำลังประมวลผลเมนูสุดอร่อยสำหรับคุณ...
+        </div>
+        <div class="ai-actions-row">
+          <button class="ai-action-btn primary-ai" id="aiOrderRecommendedBtn">⚡ สั่งเมนูนี้ทันที!</button>
+          <button class="ai-action-btn" id="aiFilterLowCalBtn">🥗 แคลต่ำ</button>
+          <button class="ai-action-btn" id="aiFilterPopularBtn">🔥 ฮิตประจำทีม</button>
+        </div>
+      </div>
     </div>
 
     <div id="myOrderBox" class="my-order hidden">
-      <h3>ออเดอร์ของคุณวันนี้</h3>
+      <div class="my-order-head">
+        <h3>✨ ออเดอร์ของคุณวันนี้</h3>
+        <span class="my-order-total" id="myOrderTotalLabel">รวม: ฿0 · 🔥 0 kcal</span>
+      </div>
       <ul id="myOrderList"></ul>
     </div>
 
     <div class="search-bar">
       <span class="search-icon">🔍</span>
-      <input type="text" id="searchInput" placeholder="ค้นหาเมนู เช่น กะเพรา, ผัดซีอิ๊ว..." />
+      <input type="text" id="searchInput" placeholder="ค้นหาเมนู เช่น กะเพรา, ผัดซีอิ๊ว, ข้าวผัด..." />
       <button class="search-clear hidden" id="searchClearBtn" title="ล้าง">×</button>
+    </div>
+
+    <div class="category-chips-bar" id="categoryChips">
+      <button class="cat-chip active" data-cat="all">ทั้งหมด</button>
+      <button class="cat-chip" data-cat="จานหลัก">🍛 จานหลัก</button>
+      <button class="cat-chip" data-cat="เส้น">🍜 เส้น</button>
+      <button class="cat-chip" data-cat="ของง่าย">🍳 ของง่าย</button>
+      <button class="cat-chip" data-cat="under50">⚡ <= 50฿</button>
+      <button class="cat-chip" data-cat="lowcal">🥗 <= 500 kcal</button>
     </div>
 
     <section class="menu-section hidden" id="sectionFavorites">
@@ -58,102 +120,177 @@
   <!-- ========== TAB: SUMMARY ========== -->
   <section class="view hidden" id="view-summary">
     <div class="summary-head">
-      <h2 id="summaryTitle">สรุปออเดอร์</h2>
+      <div>
+        <h2 id="summaryTitle">📊 สรุปออเดอร์ & รวมเงิน</h2>
+        <div id="summaryMeta" class="summary-meta"></div>
+      </div>
       <div class="summary-actions">
-        <button id="copySummaryBtn">📋 คัดลอก</button>
-        <button id="printSummaryBtn">🖨️ พิมพ์</button>
+        <button id="copySummaryBtn" class="primary-btn">📋 คัดลอกส่ง LINE</button>
+        <button id="printSummaryBtn" class="ghost">🖨️ พิมพ์เอกสาร</button>
+      </div>
+    </div>
+
+    <!-- KPI Highlight Banner -->
+    <div class="summary-kpis">
+      <div class="kpi-card">
+        <div class="kpi-label">จำนวนจานสั่งรวม</div>
+        <div class="kpi-value" id="kpiTotalDishes">0 <span>จาน</span></div>
+      </div>
+      <div class="kpi-card highlight">
+        <div class="kpi-label">ยอดรวมเงินทั้งสิ้น</div>
+        <div class="kpi-value" id="kpiGrandTotal">฿0</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-label">จำนวนผู้สั่งวันนี้</div>
+        <div class="kpi-value" id="kpiTotalPeople">0 <span>คน</span></div>
+      </div>
+      <div class="kpi-card cal-kpi">
+        <div class="kpi-label">พลังงานรวมทั้งหมด</div>
+        <div class="kpi-value" id="kpiTotalCalories">0 <span>kcal</span></div>
+      </div>
+    </div>
+
+    <!-- ========== TEAM LEADERBOARD CARDS ========== -->
+    <div class="leaderboard-grid">
+      <div class="leaderboard-card">
+        <div class="lb-header">🏆 อันดับจอมกินประจำออฟฟิศ</div>
+        <div class="lb-list" id="topFoodiesList">กำลังโหลด...</div>
+      </div>
+      <div class="leaderboard-card">
+        <div class="lb-header">🔥 Hall of Fame เมนูฮิตตลอดกาล</div>
+        <div class="lb-list" id="topMenuList">กำลังโหลด...</div>
       </div>
     </div>
 
     <div class="history-bar">
-      <label>วันที่:</label>
+      <label>เลือกวันที่:</label>
       <input type="date" id="historyDate" />
       <button class="ghost" id="todayBtn">วันนี้</button>
       <span class="history-recent-label">ย้อนหลัง:</span>
       <div class="history-chips" id="historyChips"></div>
     </div>
 
-    <div id="summaryMeta" class="summary-meta"></div>
-    <table class="summary-table" id="summaryTable">
-      <thead>
-        <tr><th>ลำดับ</th><th>ชื่อ</th><th>รายการอาหาร</th><th></th></tr>
-      </thead>
-      <tbody></tbody>
-    </table>
+    <div class="table-wrapper">
+      <table class="summary-table" id="summaryTable">
+        <thead>
+          <tr>
+            <th class="col-num">#</th>
+            <th class="col-name">ชื่อผู้สั่ง</th>
+            <th>รายการอาหาร</th>
+            <th class="col-cal">แคลอรี</th>
+            <th class="col-price">ราคา</th>
+            <th class="col-action">จัดการ</th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+        <tfoot>
+          <tr class="total-row">
+            <td colspan="3" style="text-align: right; font-weight: 700;">รวมยอดเงินทั้งหมด:</td>
+            <td class="col-cal" id="tableTotalCal" style="font-weight: 700; color: #f59e0b;">0 kcal</td>
+            <td class="col-price grand-total-cell" id="tableGrandTotal">฿0</td>
+            <td></td>
+          </tr>
+        </tfoot>
+      </table>
+    </div>
   </section>
 
   <!-- ========== TAB: PAYMENT ========== -->
   <section class="view hidden" id="view-pay">
-    <h2>ชำระเงิน — PromptPay</h2>
+    <div class="pay-header">
+      <h2>💳 ชำระเงิน — PromptPay QR</h2>
+      <p class="pay-sub">สแกนจ่ายเงินได้ง่ายๆ ผ่าน Mobile Banking ทุกธนาคาร</p>
+    </div>
+
     <div class="qr-card">
       <div class="qr-brand">THAI QR PAYMENT</div>
-      <img id="qrImage" alt="PromptPay QR" />
-      <div id="qrFallback" class="qr-fallback">
-        <div class="qr-placeholder">QR</div>
-        <p>ยังไม่ได้อัปโหลด QR — กดปุ่มด้านล่างเพื่ออัปโหลด</p>
+      <div class="qr-img-wrapper">
+        <img id="qrImage" alt="PromptPay QR" />
+        <div id="qrFallback" class="qr-fallback">
+          <div class="qr-placeholder">📱 QR</div>
+          <p>ยังไม่ได้อัปโหลด QR PromptPay</p>
+        </div>
       </div>
-      <div class="qr-name" id="qrName">—</div>
-      <div class="qr-phone-label">Mobile no.</div>
-      <div class="qr-phone" id="qrPhone">—</div>
+      <div class="qr-info">
+        <div class="qr-name" id="qrName">—</div>
+        <div class="qr-phone-badge">
+          <span>Mobile:</span> <strong id="qrPhone">—</strong>
+        </div>
+      </div>
     </div>
 
     <div class="qr-admin">
-      <h3>แก้ไขข้อมูล (สำหรับแอดมิน)</h3>
+      <h3>⚙️ แก้ไขข้อมูล PromptPay (สำหรับผู้รับเงิน/แอดมิน)</h3>
       <div class="field">
         <label>ชื่อผู้รับเงิน</label>
-        <input type="text" id="payeeNameInput" />
+        <input type="text" id="payeeNameInput" placeholder="เช่น นาย ณัฐพล เดชรุกข์ทิพ" />
       </div>
       <div class="field">
-        <label>เบอร์โทร</label>
-        <input type="text" id="payeePhoneInput" />
+        <label>เบอร์โทร / PromptPay ID</label>
+        <input type="text" id="payeePhoneInput" placeholder="เช่น 094-xxx-4990" />
       </div>
       <div class="field">
-        <label>QR Code (PNG/JPG)</label>
+        <label>รูป QR Code (PNG / JPG / WEBP)</label>
         <input type="file" id="qrFileInput" accept="image/*" />
-        <p class="hint">รูป QR จะถูกเก็บไว้ใน database เปลี่ยนเมื่อไหร่ก็ได้</p>
+        <p class="hint">รูป QR Code จะถูกบันทึกลงในระบบ ใช้งานได้ทันที</p>
       </div>
-      <button class="primary" id="saveSettingsBtn">บันทึก</button>
+      <button class="primary" id="saveSettingsBtn">💾 บันทึกข้อมูลการชำระเงิน</button>
     </div>
   </section>
 
-  <!-- ========== TAB: ADMIN (จัดการเมนู) ========== -->
+  <!-- ========== TAB: ADMIN (จัดการเมนู & ราคา) ========== -->
   <section class="view hidden" id="view-admin">
-    <h2>🛠️ จัดการเมนู</h2>
-    <p class="admin-hint">เพิ่ม / แก้ไข / ปิด-เปิด เมนูในร้าน — ต้องใส่รหัสแอดมินตอนบันทึก</p>
+    <div class="admin-header">
+      <h2>🛠️ จัดการเมนู, ราคา & แคลอรี</h2>
+      <p class="admin-hint">เพิ่มเมนูใหม่, กำหนดราคา, ระบุแคลอรี หรือสลับสถานะเปิด-ปิดเมนูในร้าน</p>
+    </div>
 
     <div class="admin-card">
       <h3>➕ เพิ่มเมนูใหม่</h3>
       <div class="form-row">
         <div class="field">
           <label>ชื่อเมนู <span class="req">*</span></label>
-          <input type="text" id="newMenuName" placeholder="เช่น ต้มยำกุ้ง" maxlength="100" />
+          <input type="text" id="newMenuName" placeholder="เช่น ต้มยำกุ้งน้ำข้น" maxlength="100" />
         </div>
         <div class="field field-small">
           <label>Emoji</label>
-          <input type="text" id="newMenuEmoji" placeholder="🍜" maxlength="4" />
+          <input type="text" id="newMenuEmoji" placeholder="🍲" maxlength="4" />
+        </div>
+        <div class="field field-small">
+          <label>ราคา (บาท) <span class="req">*</span></label>
+          <input type="number" id="newMenuPrice" placeholder="50" min="0" value="50" />
+        </div>
+        <div class="field field-small">
+          <label>พลังงาน (kcal)</label>
+          <input type="number" id="newMenuCalories" placeholder="550" min="0" value="550" />
         </div>
       </div>
       <div class="field">
-        <label>URL รูปภาพ (optional)</label>
-        <input type="text" id="newMenuImage" placeholder="https://..." />
-        <p class="hint">เว้นว่างได้ — จะใช้ emoji แทน</p>
+        <label>URL รูปภาพ ( optional )</label>
+        <input type="text" id="newMenuImage" placeholder="https://upload.wikimedia.org/..." />
+        <p class="hint">เว้นว่างได้ — ระบบจะแสดง emoji ขนาดใหญ่แทนเมื่อไม่มีรูป</p>
       </div>
       <div class="form-row">
         <div class="field">
-          <label>หมวด</label>
+          <label>หมวดหมู่</label>
           <input type="text" id="newMenuCategory" placeholder="จานหลัก / เส้น / ของง่าย" maxlength="40" />
         </div>
         <div class="field field-flags">
-          <label>ตัวเลือก</label>
-          <label class="checkbox"><input type="checkbox" id="newMenuProtein" /> มีให้เลือกหมู/ไก่/ทะเล</label>
-          <label class="checkbox"><input type="checkbox" id="newMenuStyle" /> มีให้เลือกน้ำ/แห้ง</label>
+          <label>ตัวเลือกปรับแต่ง</label>
+          <div class="flag-checks">
+            <label class="checkbox"><input type="checkbox" id="newMenuProtein" /> หมู / ไก่ / ทะเล</label>
+            <label class="checkbox"><input type="checkbox" id="newMenuStyle" /> น้ำ / แห้ง</label>
+          </div>
         </div>
       </div>
-      <button class="primary" id="addMenuBtn">+ เพิ่มเมนู</button>
+      <button class="primary" id="addMenuBtn">+ บันทึกเพิ่มเมนู</button>
     </div>
 
     <div class="admin-card">
-      <h3>📋 รายการเมนูทั้งหมด</h3>
+      <div class="admin-list-head">
+        <h3>📋 รายการเมนูทั้งหมดในระบบ</h3>
+        <span class="admin-count-badge" id="adminMenuCount">0 รายการ</span>
+      </div>
       <div id="adminMenuList" class="admin-menu-list"></div>
     </div>
   </section>
@@ -162,29 +299,31 @@
   <div class="modal hidden" id="orderModal">
     <div class="modal-card">
       <div class="modal-head">
-        <span id="modalTitle">—</span>
+        <div class="modal-head-title">
+          <span id="modalTitle">—</span>
+        </div>
         <button class="close" id="closeModal">×</button>
       </div>
       <div class="modal-body">
         <div class="field" id="proteinField">
-          <label>เนื้อสัตว์</label>
+          <label>เลือกเนื้อสัตว์</label>
           <div class="chip-row" id="proteinChips"></div>
         </div>
 
         <div class="field hidden" id="styleField">
-          <label>แบบ</label>
+          <label>แบบเมนู</label>
           <div class="chip-row" id="styleChips">
-            <button class="chip" data-val="น้ำ">น้ำ</button>
-            <button class="chip" data-val="แห้ง">แห้ง</button>
+            <button class="chip" data-val="น้ำ">🍜 น้ำ</button>
+            <button class="chip" data-val="แห้ง">🥢 แห้ง</button>
           </div>
         </div>
 
         <div class="field">
-          <label>เพิ่มไข่</label>
+          <label>เพิ่มไข่ (+10฿)</label>
           <div class="chip-row" id="eggChips">
             <button class="chip" data-val="">ไม่ใส่</button>
-            <button class="chip" data-val="ไข่ดาว">ไข่ดาว</button>
-            <button class="chip" data-val="ไข่เจียว">ไข่เจียว</button>
+            <button class="chip" data-val="ไข่ดาว">🍳 ไข่ดาว (+10฿, +90 kcal)</button>
+            <button class="chip" data-val="ไข่เจียว">🍳 ไข่เจียว (+10฿, +120 kcal)</button>
           </div>
         </div>
 
@@ -192,26 +331,105 @@
           <label>ระดับความเผ็ด</label>
           <div class="chip-row" id="spiceChips">
             <button class="chip" data-val="">ปกติ</button>
-            <button class="chip" data-val="ไม่เผ็ด">ไม่เผ็ด</button>
-            <button class="chip" data-val="เผ็ดน้อย">เผ็ดน้อย</button>
-            <button class="chip" data-val="เผ็ดมาก">เผ็ดมาก</button>
+            <button class="chip" data-val="ไม่เผ็ด">🥦 ไม่เผ็ด</button>
+            <button class="chip" data-val="เผ็ดน้อย">🌶️ เผ็ดน้อย</button>
+            <button class="chip" data-val="เผ็ดมาก">🔥 เผ็ดมาก</button>
           </div>
         </div>
 
         <div class="field">
-          <label class="checkbox">
+          <label class="checkbox special-checkbox">
             <input type="checkbox" id="specialChk" />
-            <span>พิเศษ (เพิ่มเนื้อ)</span>
+            <span>⚡ พิเศษ (+10฿, +100 kcal) — เพิ่มเนื้อ/ปริมาณ</span>
           </label>
         </div>
 
         <div class="field">
           <label>หมายเหตุเพิ่มเติม</label>
-          <input type="text" id="notesInput" placeholder="เช่น ไม่ใส่ผัก, แยกข้าว ฯลฯ" />
+          <input type="text" id="notesInput" placeholder="เช่น ไม่ใส่ผักชี, แยกน้ำ, เผ็ดๆ" />
+        </div>
+
+        <div class="modal-price-box">
+          <div class="price-breakdown">
+            <span>ราคา: <strong id="modalBasePrice">฿50</strong></span>
+            <span id="modalExtraBadge" class="extra-badge hidden">+ ออปชัน</span>
+            <div class="modal-cal-info">🔥 พลังงานประมาณ: <strong id="modalTotalCalories">550 kcal</strong></div>
+          </div>
+          <div class="total-price-tag">
+            รวม: <span id="modalTotalPrice">฿50</span>
+          </div>
         </div>
       </div>
       <div class="modal-foot">
-        <button class="primary" id="confirmOrderBtn">✅ ยืนยันสั่ง</button>
+        <button class="primary glow-btn" id="confirmOrderBtn">✅ ยืนยันสั่งอาหาร</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========== SUMMARY EXPORT & PRINT POPUP MODAL ========== -->
+  <div class="modal hidden" id="summaryExportModal">
+    <div class="modal-card summary-export-card">
+      <div class="modal-head">
+        <div class="modal-head-title">
+          <span>📋 สรุปรายการออเดอร์ (เฉพาะผู้ที่สั่ง)</span>
+        </div>
+        <button class="close" id="closeExportModal">×</button>
+      </div>
+      <div class="modal-body">
+        <div class="export-meta-badge" id="exportMetaBadge"></div>
+        
+        <!-- Clean Visual Display List -->
+        <div class="export-visual-wrapper">
+          <div class="export-visual-list" id="exportVisualList"></div>
+        </div>
+
+        <!-- Hidden Plain Text for Copying to LINE -->
+        <pre class="hidden" id="exportLineText"></pre>
+      </div>
+      <div class="modal-foot export-foot">
+        <button class="primary-btn glow-btn" id="confirmCopyLineBtn">📋 คัดลอกข้อความ LINE</button>
+        <button class="ghost" id="confirmPrintBtn">🖨️ พิมพ์เอกสาร</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========== LUCKY FOOD WHEEL MODAL ========== -->
+  <div class="modal hidden" id="wheelModal">
+    <div class="modal-card wheel-modal-card">
+      <div class="modal-head">
+        <div class="modal-head-title">
+          <span>🎡 วงล้อมงคลหมุนสุ่มอาหาร</span>
+        </div>
+        <button class="close" id="closeWheelModal">×</button>
+      </div>
+      <div class="modal-body wheel-body">
+        <div class="wheel-wrapper">
+          <div class="wheel-pointer">▼</div>
+          <canvas id="wheelCanvas" width="280" height="280"></canvas>
+        </div>
+        <div class="wheel-result" id="wheelResultText">
+          กดปุ่ม <strong>"🎯 หมุนเสี่ยงทาย!"</strong> เพื่อสุ่มเมนูมื้อนี้! ✨
+        </div>
+      </div>
+      <div class="modal-foot wheel-foot">
+        <button class="primary-btn glow-btn" id="spinWheelBtn">🎯 หมุนเสี่ยงทาย!</button>
+        <button class="primary-btn glow-btn hidden" id="orderWheelResultBtn">⚡ สั่งเมนูนี้เลย!</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========== CUSTOM APP DIALOG (ALERT / CONFIRM / PROMPT) ========== -->
+  <div class="modal hidden" id="customDialogModal">
+    <div class="modal-card custom-dialog-card">
+      <div class="dialog-icon" id="dialogIcon">⚠️</div>
+      <h3 class="dialog-title" id="dialogTitle">ยืนยันการทำรายการ</h3>
+      <div class="dialog-message" id="dialogMessage">...</div>
+      <div class="dialog-input-wrapper hidden" id="dialogInputWrapper">
+        <input type="text" id="dialogInput" placeholder="" />
+      </div>
+      <div class="dialog-actions">
+        <button class="ghost" id="dialogCancelBtn">ยกเลิก</button>
+        <button class="primary-btn glow-btn" id="dialogConfirmBtn">ยืนยัน</button>
       </div>
     </div>
   </div>
@@ -221,3 +439,4 @@
   <script src="/app.js"></script>
 </body>
 </html>
+

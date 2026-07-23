@@ -84,6 +84,8 @@ app.post('/api/menu', requireAdmin, async (req, res) => {
   const emoji     = (b.emoji     || '').trim().slice(0, 10) || '🍽️';
   const image_url = (b.image_url || '').trim() || null;
   const category  = (b.category  || '').trim().slice(0, 40) || null;
+  const price     = Number.isFinite(Number(b.price)) ? Math.max(0, Number(b.price)) : 50;
+  const calories  = Number.isFinite(Number(b.calories)) ? Math.max(0, Number(b.calories)) : 450;
   const has_protein = !!b.has_protein;
   const has_style   = !!b.has_style;
 
@@ -93,10 +95,10 @@ app.post('/api/menu', requireAdmin, async (req, res) => {
   }
   try {
     const { rows } = await pool.query(
-      `INSERT INTO menu_items (name_th, emoji, image_url, has_protein, has_style, category, display_order, is_active)
-       VALUES ($1, $2, $3, $4, $5, $6, COALESCE((SELECT MAX(display_order) FROM menu_items), 0) + 1, true)
+      `INSERT INTO menu_items (name_th, emoji, image_url, price, calories, has_protein, has_style, category, display_order, is_active)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, COALESCE((SELECT MAX(display_order) FROM menu_items), 0) + 1, true)
        RETURNING *`,
-      [name_th, emoji, image_url, has_protein, has_style, category]
+      [name_th, emoji, image_url, price, calories, has_protein, has_style, category]
     );
     res.json(rows[0]);
   } catch (err) {
@@ -121,6 +123,8 @@ app.patch('/api/menu/:id', requireAdmin, async (req, res) => {
     if (u && !/^https?:\/\//i.test(u)) return res.status(400).json({ error: 'image_url ต้องเป็น URL ขึ้นต้นด้วย http:// หรือ https://' });
     set('image_url', u || null);
   }
+  if (typeof b.price      !== 'undefined' && Number.isFinite(Number(b.price))) set('price', Math.max(0, Number(b.price)));
+  if (typeof b.calories   !== 'undefined' && Number.isFinite(Number(b.calories))) set('calories', Math.max(0, Number(b.calories)));
   if (typeof b.category    === 'string') set('category',    b.category.trim().slice(0, 40) || null);
   if (typeof b.has_protein === 'boolean') set('has_protein', b.has_protein);
   if (typeof b.has_style   === 'boolean') set('has_style',   b.has_style);
@@ -262,11 +266,16 @@ app.get('/api/orders', async (req, res) => {
     const { rows } = await pool.query(
       `SELECT o.id, o.order_date::text AS order_date, o.person_id, o.menu_item_id,
               o.protein, o.style, o.add_egg, o.spice_level,
-              o.is_special, o.notes, o.created_at,
+              o.is_special, o.notes,
+              COALESCE(o.price, m.price, 50) AS price,
+              COALESCE(o.calories, m.calories, 450) AS calories,
+              o.created_at,
               p.name           AS person_name,
               p.display_order  AS person_order,
               m.name_th        AS menu_name,
-              m.emoji          AS menu_emoji
+              m.emoji          AS menu_emoji,
+              m.price          AS base_price,
+              m.calories       AS base_calories
        FROM orders o
        JOIN people p     ON p.id = o.person_id
        JOIN menu_items m ON m.id = o.menu_item_id
@@ -300,7 +309,6 @@ app.post('/api/orders', async (req, res) => {
     return res.status(400).json({ error: 'person_id และ menu_item_id จำเป็น' });
   }
 
-  // จำกัดความยาวเพื่อกัน DoS / DB bloat
   const cap = (v, n) => (typeof v === 'string' ? v.slice(0, n) : v);
   const order_date = b.order_date && /^\d{4}-\d{2}-\d{2}$/.test(b.order_date) ? b.order_date : null;
   const protein     = cap((b.protein     || '').trim(), 30) || null;
@@ -311,13 +319,31 @@ app.post('/api/orders', async (req, res) => {
   const is_special  = !!b.is_special;
 
   try {
+    let finalPrice = Number(b.price);
+    let finalCalories = Number(b.calories);
+
+    if (!Number.isFinite(finalPrice) || !Number.isFinite(finalCalories)) {
+      const { rows: mRows } = await pool.query('SELECT price, calories FROM menu_items WHERE id = $1', [menu_item_id]);
+      const basePrice = (mRows[0] && mRows[0].price != null) ? Number(mRows[0].price) : 50;
+      const baseCal   = (mRows[0] && mRows[0].calories != null) ? Number(mRows[0].calories) : 450;
+      
+      if (!Number.isFinite(finalPrice)) {
+        finalPrice = basePrice + (add_egg ? 10 : 0) + (is_special ? 10 : 0);
+      }
+      if (!Number.isFinite(finalCalories)) {
+        const eggCal = add_egg === 'ไข่ดาว' ? 90 : (add_egg === 'ไข่เจียว' ? 120 : 0);
+        const specCal = is_special ? 100 : 0;
+        finalCalories = baseCal + eggCal + specCal;
+      }
+    }
+
     const { rows } = await pool.query(
       `INSERT INTO orders
          (order_date, person_id, menu_item_id, protein, style,
-          add_egg, spice_level, is_special, notes)
-       VALUES (COALESCE($1::date, CURRENT_DATE), $2, $3, $4, $5, $6, $7, $8, $9)
-       RETURNING id, order_date::text AS order_date`,
-      [order_date, person_id, menu_item_id, protein, style, add_egg, spice_level, is_special, notes]
+          add_egg, spice_level, is_special, notes, price, calories)
+       VALUES (COALESCE($1::date, CURRENT_DATE), $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+       RETURNING id, order_date::text AS order_date, price, calories`,
+      [order_date, person_id, menu_item_id, protein, style, add_egg, spice_level, is_special, notes, finalPrice, finalCalories]
     );
     res.json(rows[0]);
   } catch (err) {
@@ -383,6 +409,36 @@ app.put('/api/settings', requireAdmin, async (req, res) => {
       );
     }
     res.json({ ok: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ===== Leaderboard Stats =====
+app.get('/api/leaderboard', async (_req, res) => {
+  try {
+    const topFoodies = await pool.query(`
+      SELECT p.id, p.name, COUNT(o.id) as order_count, COALESCE(SUM(o.price), 0) as total_spent
+      FROM people p
+      JOIN orders o ON p.id = o.person_id
+      GROUP BY p.id, p.name
+      ORDER BY order_count DESC, total_spent DESC
+      LIMIT 5
+    `);
+
+    const topMenu = await pool.query(`
+      SELECT m.id, m.name_th, m.emoji, COUNT(o.id) as order_count
+      FROM menu_items m
+      JOIN orders o ON m.id = o.menu_item_id
+      GROUP BY m.id, m.name_th, m.emoji
+      ORDER BY order_count DESC
+      LIMIT 5
+    `);
+
+    res.json({
+      top_foodies: topFoodies.rows,
+      top_menu: topMenu.rows,
+    });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
